@@ -1,0 +1,53 @@
+<?php
+require_once __DIR__ . '/../inc/header.php';
+require_login();
+
+$user_id = $_SESSION['user_id'];
+$stmt = safe_prepare($mysqli, "SELECT * FROM problems WHERE user_id = ? ORDER BY created_at DESC");
+if ($stmt === false) {
+  header("Location: " . SITE_URL . "/public/index.php?error=server");
+  exit;
+}
+$stmt->bind_param('i', $user_id);
+$stmt->execute();
+$res = $stmt->get_result();
+$rows = $res->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+?>
+<div style="max-width:900px;margin:0 auto;background:white;padding:18px;border-radius:8px;">
+  <h2>Dashboard — <?= h($_SESSION['name']) ?></h2>
+  <?php if(empty($rows)): ?>
+    <p>You have not posted any requests yet.</p>
+  <?php else: foreach($rows as $r): ?>
+    <div style="border-bottom:1px solid #eee; padding:12px 0;">
+      <strong><?= h($r['title']) ?></strong> 
+      <span style="color:#666; font-size:13px;">(<?= h($r['category']) ?>)</span>
+      <div style="font-size:12px;color:#888">Posted on <?= h($r['created_at']) ?></div>
+      
+      <p style="margin-top:8px"><?= nl2br(h($r['description'])) ?></p>
+      
+      <?php if($r['image_path']): ?>
+        <div><a href="<?= SITE_URL ?>/<?= h($r['image_path']) ?>" target="_blank">Image</a></div>
+      <?php endif; ?>
+      <?php if($r['doc_path']): ?>
+        <div><a href="<?= SITE_URL ?>/<?= h($r['doc_path']) ?>" target="_blank">Document</a></div>
+      <?php endif; ?>
+
+      <!-- Payment status -->
+      <div style="margin-top:8px; font-size:14px;">
+        <b>Payment Status:</b> 
+        <?php if($r['payment_status'] === 'paid'): ?>
+          <span style="color:green;">Paid (Txn: <?= h($r['txn_id'] ?? 'N/A') ?>)</span>
+        <?php else: ?>
+          <span style="color:red;">Pending</span>
+          <a href="<?= SITE_URL ?>/public/pay.php?id=<?= h($r['id']) ?>" 
+             style="margin-left:10px; padding:4px 8px; background:#3498db; color:white; border-radius:4px; text-decoration:none;">
+             Pay Now
+          </a>
+        <?php endif; ?>
+      </div>
+    </div>
+  <?php endforeach; endif; ?>
+</div>
+
+<?php require_once __DIR__ . '/../inc/footer.php'; ?>
